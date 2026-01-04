@@ -10,9 +10,22 @@
 		7C84080B2F096E0200C15657 /* TMMHealth.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TMMHealth.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		7C0F89D92F0AA64A004F1FB9 /* Exceptions for "TMMHealth" folder in "TMMHealth" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 7C84080A2F096E0200C15657 /* TMMHealth */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		7C84080D2F096E0200C15657 /* TMMHealth */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				7C0F89D92F0AA64A004F1FB9 /* Exceptions for "TMMHealth" folder in "TMMHealth" target */,
+			);
 			path = TMMHealth;
 			sourceTree = "<group>";
 		};
@@ -249,10 +262,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = TMMHealth/TMMHealth.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TMMHealth/Info.plist;
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "TMM Health uses your activity data to show daily progress and weekly insights.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "TMM Health does not write data, only reads your activity.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -280,10 +297,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = TMMHealth/TMMHealth.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TMMHealth/Info.plist;
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "TMM Health uses your activity data to show daily progress and weekly insights.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "TMM Health does not write data, only reads your activity.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

@@ -62,7 +62,7 @@ struct OnboardingView: View {
             PrimaryButton(title: "Connect Health") {
                 //viewModel.state = .requestingPermission
                 Task {
-                        await viewModel.simulatePermissionResult(granted: false)
+                        await viewModel.connectHealth()
                     }
             }
         }

@@ -17,13 +17,24 @@ enum OnboardingState {
 
 @MainActor
 final class OnboardingViewModel: ObservableObject {
+
     @Published var state: OnboardingState = .idle
-    
-    func simulatePermissionResult(granted: Bool) async {
+
+    private let healthService: HealthService
+
+    init(healthService: HealthService = HealthKitService()) {
+        self.healthService = healthService
+    }
+
+    func connectHealth() async {
         state = .requestingPermission
-        try? await Task.sleep(for: .seconds(1.2))
-        state = granted ? .completed : .denied
+
+        do {
+            let status = try await healthService.requestAuthorization()
+            state = status == .authorized ? .completed : .denied
+        } catch {
+            state = .denied
+        }
     }
 }
-
 
