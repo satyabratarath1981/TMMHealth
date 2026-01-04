@@ -8,9 +8,9 @@
 import SwiftUI
 
 enum AppFont {
-    static let title: Font = Font.largeTitle.bold()
-    static let headline: Font = Font.headline
-    static let body: Font = Font.body
-    static let caption = Font.caption
+    static let title: Font = Font.system(size: 34, weight: .bold)
+    static let headline: Font = Font.system(size: 17, weight: .bold)
+    static let body: Font = Font.system(size: 15)
+    static let caption = Font.system(size: 13)
     
 }

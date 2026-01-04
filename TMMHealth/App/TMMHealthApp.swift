@@ -11,7 +11,7 @@ import SwiftUI
 struct TMMHealthApp: App {
     var body: some Scene {
         WindowGroup {
-            
+            AppRootView()
         }
     }
 }
