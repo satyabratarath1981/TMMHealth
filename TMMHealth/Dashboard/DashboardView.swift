@@ -7,6 +7,7 @@
 
 
 import SwiftUI
+import SwiftData
 
 /// Main dashboard screen responsible for displaying
 /// today's activity summary and handling different UI states.
@@ -16,6 +17,12 @@ struct DashboardView: View {
     /// `@StateObject` ensures the ViewModel lifecycle is tied to this view
     /// and is not recreated on every render.
     @StateObject private var viewModel = DashboardViewModel()
+    
+    init() {
+           _viewModel = StateObject(
+               wrappedValue: DashboardViewModel()
+           )
+       }
     
     var body: some View {
         content

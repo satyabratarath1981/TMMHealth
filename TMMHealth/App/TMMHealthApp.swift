@@ -6,19 +6,23 @@
 //
 
 import SwiftUI
+import SwiftData
 
-/// Application entry point.
-/// Responsible for setting up the root scene and launching the app.
+/// Application entry point using the SwiftUI lifecycle.
+/// Configures global app dependencies such as SwiftData.
 @main
 struct TMMHealthApp: App {
-    
+
     var body: some Scene {
-        /// `WindowGroup` creates the main app window.
-        /// On iOS, this represents the primary app scene.
+        /// Main app window scene.
         WindowGroup {
-            /// `AppRootView` acts as the root coordinator
-            /// and determines the initial navigation flow.
+            /// Root coordinator view that controls
+            /// high-level navigation and app flow.
             AppRootView()
         }
+        /// Registers the SwiftData model container.
+        /// Makes `DailyHealthCache` available throughout the app
+        /// via `@Environment(\.modelContext)`.
+        .modelContainer(for: DailyHealthCache.self)
     }
 }
