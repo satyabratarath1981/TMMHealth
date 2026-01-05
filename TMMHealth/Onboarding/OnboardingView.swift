@@ -7,28 +7,46 @@
 
 import SwiftUI
 
+/// Onboarding screen responsible for introducing the app
+/// and requesting Health access from the user.
 struct OnboardingView: View {
+    
+    /// ViewModel that manages onboarding state and business logic.
+    /// `@StateObject` ensures the ViewModel lifecycle
+    /// is tied to this view instance.
     @StateObject private var viewModel = OnboardingViewModel()
+    
+    /// Global app state used to transition
+    /// from onboarding to dashboard flow.
+    @EnvironmentObject private var appState: AppState
     
     var body: some View {
         content
+            /// Animates transitions between onboarding states.
             .animation(.easeOut, value: viewModel.state)
     }
     
+    /// Switches UI based on the current onboarding state.
+    /// Ensures predictable, state-driven rendering.
     @ViewBuilder
     private var content: some View {
         switch viewModel.state {
         case .idle:
             onboardingContent
+            
         case .requestingPermission:
             loadingContent
+            
         case .denied:
             limitedModeContent
+            
         case .completed:
             completedContent
         }
     }
     
+    /// Initial onboarding content introducing the app
+    /// and explaining the value of connecting Health data.
     private var onboardingContent: some View {
         VStack(spacing: Spacing.xl) {
             Spacer()
@@ -48,6 +66,7 @@ struct OnboardingView: View {
                     .multilineTextAlignment(.center)
             }
 
+            /// Highlights key features in a card-style layout.
             CardView {
                 VStack(alignment: .leading, spacing: Spacing.sm) {
                     Label("Daily steps & calories", systemImage: "figure.walk")
@@ -59,16 +78,17 @@ struct OnboardingView: View {
 
             Spacer()
 
+            /// Initiates Health permission request.
             PrimaryButton(title: "Connect Health") {
-                //viewModel.state = .requestingPermission
                 Task {
-                        await viewModel.connectHealth()
-                    }
+                    await viewModel.connectHealth()
+                }
             }
         }
         .padding(Spacing.lg)
     }
     
+    /// Loading state displayed while requesting Health permissions.
     private var loadingContent: some View {
         VStack(spacing: Spacing.lg) {
             Spacer()
@@ -84,6 +104,8 @@ struct OnboardingView: View {
         }
     }
     
+    /// Shown when Health permission is denied.
+    /// Explains limitations and allows retrying authorization.
     private var limitedModeContent: some View {
         VStack(spacing: Spacing.lg) {
             Spacer()
@@ -100,6 +122,7 @@ struct OnboardingView: View {
                 .foregroundStyle(Color.textSecondary)
                 .multilineTextAlignment(.center)
 
+            /// Allows user to retry permission request.
             PrimaryButton(title: "Try Again") {
                 viewModel.state = .requestingPermission
             }
@@ -109,6 +132,8 @@ struct OnboardingView: View {
         .padding(Spacing.lg)
     }
     
+    /// Final onboarding state shown when Health access is granted.
+    /// Automatically transitions to the dashboard.
     private var completedContent: some View {
         VStack(spacing: Spacing.lg) {
             Spacer()
@@ -126,7 +151,13 @@ struct OnboardingView: View {
 
             Spacer()
         }
+        .onAppear {
+            /// Small delay to allow success feedback
+            /// before navigating to the dashboard.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                appState.flow = .dashboard
+            }
+        }
     }
 }
-
 
