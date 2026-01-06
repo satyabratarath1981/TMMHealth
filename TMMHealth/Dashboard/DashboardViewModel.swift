@@ -7,51 +7,119 @@
 
 import SwiftUI
 import Combine
+import SwiftData
 
-/// ViewModel responsible for loading and managing
-/// dashboard-related business logic and UI state.
+/// ViewModel responsible for:
+/// - Loading Health data
+/// - Managing cache + refresh logic
+/// - Exposing UI-ready state for DashboardView
 @MainActor
 final class DashboardViewModel: ObservableObject {
 
-    /// Current UI state of the dashboard.
-    /// Drives which view is rendered in `DashboardView`.
+    // MARK: - UI State
+
+    /// Represents the overall screen state
     @Published var state: DashboardState = .loading
 
-    /// Holds the successfully loaded health summary.
-    /// Optional to safely represent "no data" or loading states.
+    /// Summary for today's activity
     @Published var summary: HealthSummary?
-    
-    /// Abstraction over the health data source.
-    /// Enables dependency injection and testability.
+
+    /// Cached data for the last 7 days (used for charts)
+    @Published var weeklyData: [DailyHealthCache] = []
+
+    /// Currently selected metric for the trend chart
+    @Published var selectedMetric: TrendMetric = .steps
+
+    // MARK: - Dependencies
+
+    /// Abstraction over HealthKit (makes ViewModel testable)
     private let healthService: HealthService
-    
-    /// Designated initializer with dependency injection.
-    /// Default implementation uses `HealthKitService`.
+
+    /// Handles local persistence using SwiftData
+    private var cacheService: HealthCacheService?
+
+    /// SwiftData context injected from the View
+    private var context: ModelContext?
+
+    // MARK: - Initializer
+
+    /// Default initializer with dependency injection
+    /// Allows mocking HealthService for unit tests
     init(healthService: HealthService = HealthKitService()) {
         self.healthService = healthService
     }
 
-    /// Loads today's health summary asynchronously.
-    /// Updates UI state on the main thread using `@MainActor`.
+    // MARK: - Context Injection (IMPORTANT)
+
+    /// Injects SwiftData context once
+    /// Prevents multiple initializations when View redraws
+    func setContextIfNeeded(_ context: ModelContext) {
+        guard self.context == nil else { return }
+        self.context = context
+        self.cacheService = HealthCacheService(context: context)
+    }
+
+    // MARK: - Public API
+
+    /// Entry point called from the View
+    /// Loads cached data first, then refreshes from HealthKit
     func load() async {
-        /// Ensure loading state is reflected immediately in the UI.
-        state = .loading
+        guard let cacheService else { return }
+
+        // 1️⃣ Load cached data immediately for fast UI rendering
+        if let cachedToday = cacheService.fetchToday() {
+            summary = HealthSummary(
+                steps: cachedToday.steps,
+                activeCalories: Int(cachedToday.activeCalories)
+            )
+
+            weeklyData = cacheService.fetchLast7Days()
+            state = .loaded
+        } else {
+            // No cache available yet
+            state = .loading
+        }
+
+        // 2️⃣ Refresh with live HealthKit data
+        await refresh()
+    }
+
+    // MARK: - Refresh Logic
+
+    /// Fetches fresh data from HealthKit
+    /// Updates cache and UI state accordingly
+    private func refresh() async {
+        guard let cacheService else { return }
 
         do {
-            /// Fetch health data using async/await.
+            // Fetch live HealthKit summary
             let data = try await healthService.fetchTodaySummary()
-            
-            /// Update published properties once data is available.
+
+            // Update in-memory state
             summary = data
-            
-            /// Determine final UI state based on data content.
-            /// If steps are zero, treat it as an empty state.
-            state = data.steps == 0 ? .empty : .loaded
+
+            // Persist latest data
+            cacheService.save(summary: data)
+
+            // Reload last 7 days from cache (includes today)
+            weeklyData = cacheService.fetchLast7Days()
+
+            // Decide UI state
+            state = isEmpty(data) ? .empty : .loaded
+
         } catch {
-            /// Handle failure gracefully with a user-friendly error state.
-            state = .error("Health data unavailable")
+            // Only show error if nothing was previously shown
+            if summary == nil {
+                state = .error("Health data unavailable")
+            }
         }
     }
+
+    // MARK: - Helpers
+
+    /// Determines whether today's summary is effectively empty
+    /// Used to decide between `.empty` and `.loaded` UI states
+    private func isEmpty(_ data: HealthSummary) -> Bool {
+        data.steps == 0 && data.activeCalories == 0
+    }
 }
-
-
