@@ -20,6 +20,8 @@ final class DashboardViewModel: ObservableObject {
 
     /// Represents the overall screen state
     @Published var state: DashboardState = .loading
+    
+    @Published var weeklyTrends: [DailyTrend] = []
 
     /// Summary for today's activity
     @Published var summary: HealthSummary?
@@ -45,7 +47,7 @@ final class DashboardViewModel: ObservableObject {
 
     /// Default initializer with dependency injection
     /// Allows mocking HealthService for unit tests
-    init(healthService: HealthService = HealthKitService()) {
+    init(healthService: HealthService) {
         self.healthService = healthService
     }
 
@@ -64,24 +66,19 @@ final class DashboardViewModel: ObservableObject {
     /// Entry point called from the View
     /// Loads cached data first, then refreshes from HealthKit
     func load() async {
-        guard let cacheService else { return }
+        state = .loading
 
-        // 1️⃣ Load cached data immediately for fast UI rendering
-        if let cachedToday = cacheService.fetchToday() {
-            summary = HealthSummary(
-                steps: cachedToday.steps,
-                activeCalories: Int(cachedToday.activeCalories)
-            )
+        do {
+            async let today = healthService.fetchTodaySummary()
+            async let weekly = healthService.fetchWeeklyTrends()
 
-            weeklyData = cacheService.fetchLast7Days()
-            state = .loaded
-        } else {
-            // No cache available yet
-            state = .loading
+            self.summary = try await today
+            weeklyTrends = try await weekly
+
+            state = self.summary?.steps == 0 ? .empty : .loaded
+        } catch {
+            state = .error(error.localizedDescription)
         }
-
-        // 2️⃣ Refresh with live HealthKit data
-        await refresh()
     }
 
     // MARK: - Refresh Logic

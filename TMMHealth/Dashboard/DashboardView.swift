@@ -21,7 +21,15 @@ struct DashboardView: View {
 
     /// ViewModel lifecycle is tied to this View
     /// StateObject ensures it is created only once
-    @StateObject private var viewModel = DashboardViewModel()
+    @StateObject private var viewModel = DashboardViewModel(
+        healthService: {
+            #if targetEnvironment(simulator)
+            MockHealthService()
+            #else
+            HealthKitService()
+            #endif
+        }()
+    )
 
     var body: some View {
         content
@@ -200,22 +208,31 @@ struct DashboardView: View {
     // MARK: - Trend Chart
     /// Line chart visualizing weekly data
     private var trendChart: some View {
-        Chart {
-            ForEach(viewModel.weeklyData, id: \.date) { day in
-                LineMark(
-                    // X-axis: Date (grouped by day)
-                    x: .value("Day", day.date, unit: .day),
-
-                    // Y-axis: Steps OR Calories based on selection
-                    y: .value(
-                        viewModel.selectedMetric.rawValue,
-                        viewModel.selectedMetric == .steps
+        Chart(viewModel.weeklyTrends) { day in
+            LineMark(
+                x: .value("Date", day.date),
+                y: .value(
+                    viewModel.selectedMetric.rawValue,
+                    viewModel.selectedMetric == .steps
                         ? day.steps
                         : Int(day.activeCalories)
-                    )
                 )
-                // Smooth curved line
-                .interpolationMethod(.catmullRom)
+            )
+            .interpolationMethod(.catmullRom)
+
+            PointMark(
+                x: .value("Date", day.date),
+                y: .value(
+                    viewModel.selectedMetric.rawValue,
+                    viewModel.selectedMetric == .steps
+                        ? day.steps
+                        : Int(day.activeCalories)
+                )
+            )
+        }
+        .chartXAxis {
+            AxisMarks(values: .stride(by: .day)) {
+                AxisValueLabel(format: .dateTime.weekday(.abbreviated))
             }
         }
         .frame(height: 180)

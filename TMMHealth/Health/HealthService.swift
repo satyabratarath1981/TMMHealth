@@ -39,5 +39,7 @@ protocol HealthService {
     /// - Returns: A `HealthSummary` domain model.
     /// - Throws: `HealthError` or underlying service errors.
     func fetchTodaySummary() async throws -> HealthSummary
+    
+    func fetchWeeklyTrends() async throws -> [DailyTrend]
 }
 

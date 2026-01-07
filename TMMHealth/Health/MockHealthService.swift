@@ -33,10 +33,30 @@ final class MockHealthService: HealthService {
     /// Returns a deterministic health summary.
     /// Useful for predictable UI rendering and unit testing.
     func fetchTodaySummary() async throws -> HealthSummary {
+        
         HealthSummary(
             steps: 8234,
             activeCalories: 486
         )
+        print("🧪 MockHealthService.fetchTodaySummary CALLED")
+            return HealthSummary(steps: 8234, activeCalories: 486)
+    }
+    
+    func fetchWeeklyTrends() async throws -> [DailyTrend] {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+
+        // Deterministic 7-day mock data (like Apple Health)
+        return (0..<7).map { offset in
+            let date = calendar.date(byAdding: .day, value: -offset, to: today)!
+
+            return DailyTrend(
+                date: date,
+                steps: Int.random(in: 2000...10000),
+                activeCalories: Double.random(in: 150...600)
+            )
+        }
+        .reversed()
     }
 }
 

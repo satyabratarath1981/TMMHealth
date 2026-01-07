@@ -13,6 +13,72 @@ final class HealthKitService: HealthService {
 
     /// Primary interface to the HealthKit database.
     private let healthStore = HKHealthStore()
+    
+    func fetchWeeklyTrends() async throws -> [DailyTrend] {
+        let calendar = Calendar.current
+        let endDate = Date()
+        let startDate = calendar.startOfDay(
+            for: calendar.date(byAdding: .day, value: -6, to: endDate)!
+        )
+
+        let stepsType = HKQuantityType.quantityType(forIdentifier: .stepCount)!
+        let caloriesType = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)!
+
+        func query(
+            _ type: HKQuantityType,
+            unit: HKUnit
+        ) async throws -> [Date: Double] {
+
+            var interval = DateComponents()
+            interval.day = 1
+
+            return try await withCheckedThrowingContinuation { continuation in
+                let query = HKStatisticsCollectionQuery(
+                    quantityType: type,
+                    quantitySamplePredicate: nil,
+                    options: .cumulativeSum,
+                    anchorDate: startDate,
+                    intervalComponents: interval
+                )
+
+                query.initialResultsHandler = { _, results, _ in
+                    guard let results else {
+                        continuation.resume(returning: [:])
+                        return
+                    }
+
+                    var values: [Date: Double] = [:]
+
+                    results.enumerateStatistics(from: startDate, to: endDate) {
+                        stats, _ in
+                        let value =
+                            stats.sumQuantity()?.doubleValue(for: unit) ?? 0
+                        values[calendar.startOfDay(for: stats.startDate)] = value
+                    }
+
+                    continuation.resume(returning: values)
+                }
+
+                healthStore.execute(query)
+            }
+        }
+
+        let steps = try await query(stepsType, unit: .count())
+        let calories = try await query(caloriesType, unit: .kilocalorie())
+
+        return (0..<7).map { offset in
+            let date = calendar.startOfDay(
+                for: calendar.date(byAdding: .day, value: -offset, to: endDate)!
+            )
+
+            return DailyTrend(
+                date: date,
+                steps: Int(steps[date] ?? 0),
+                activeCalories: calories[date] ?? 0
+            )
+        }
+        .reversed()
+    }
 
     /// Requests read authorization for required HealthKit data.
     /// - Returns: Current authorization status.
@@ -61,75 +127,49 @@ extension HealthKitService {
     /// - Returns: `HealthSummary` containing steps and active calories.
     /// - Throws: `HealthError` or HealthKit query errors.
     func fetchTodaySummary() async throws -> HealthSummary {
+        print("🚨 HealthKitService.fetchTodaySummary CALLED")
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: Date())
+        let now = Date()
 
-        /// Define HealthKit quantity types.
-        guard
-            let stepType = HKQuantityType.quantityType(forIdentifier: .stepCount),
-            let energyType = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)
-        else {
-            throw HealthError.unknown
-        }
+        let stepsType = HKQuantityType.quantityType(forIdentifier: .stepCount)!
+        let caloriesType = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)!
 
-        /// Create a predicate for samples from the start of today.
-        let startOfDay = Calendar.current.startOfDay(for: Date())
-        let predicate = HKQuery.predicateForSamples(
-            withStart: startOfDay,
-            end: Date(),
-            options: .strictStartDate
-        )
+        func sum(
+            _ type: HKQuantityType,
+            unit: HKUnit
+        ) async throws -> Double {
 
-        /// Fetch steps and calories concurrently for better performance.
-        async let steps = fetchCumulativeQuantity(
-            type: stepType,
-            predicate: predicate,
-            unit: .count()
-        )
+            let predicate = HKQuery.predicateForSamples(
+                withStart: startOfDay,
+                end: now,
+                options: .strictStartDate
+            )
 
-        async let calories = fetchCumulativeQuantity(
-            type: energyType,
-            predicate: predicate,
-            unit: .kilocalorie()
-        )
+            return try await withCheckedThrowingContinuation { continuation in
+                let query = HKStatisticsQuery(
+                    quantityType: type,
+                    quantitySamplePredicate: predicate,
+                    options: .cumulativeSum
+                ) { _, result, error in
 
-        /// Combine results into a single domain model.
-        return try await HealthSummary(
-            steps: Int(steps),
-            activeCalories: Int(calories)
-        )
-    }
+                    let value = result?
+                        .sumQuantity()?
+                        .doubleValue(for: unit) ?? 0
 
-    /// Executes a cumulative HealthKit statistics query.
-    /// - Parameters:
-    ///   - type: Quantity type (e.g., steps, calories)
-    ///   - predicate: Date range predicate
-    ///   - unit: Measurement unit
-    /// - Returns: Aggregated value for the given type.
-    private func fetchCumulativeQuantity(
-        type: HKQuantityType,
-        predicate: NSPredicate,
-        unit: HKUnit
-    ) async throws -> Double {
-
-        /// Bridge HKStatisticsQuery to async/await.
-        try await withCheckedThrowingContinuation { continuation in
-            let query = HKStatisticsQuery(
-                quantityType: type,
-                quantitySamplePredicate: predicate,
-                options: .cumulativeSum
-            ) { _, result, error in
-
-                if let error = error {
-                    continuation.resume(throwing: error)
-                    return
+                    continuation.resume(returning: value)
                 }
 
-                /// Extract the cumulative value or default to zero.
-                let value = result?.sumQuantity()?.doubleValue(for: unit) ?? 0
-                continuation.resume(returning: value)
+                healthStore.execute(query)
             }
-
-            /// Execute the HealthKit query.
-            healthStore.execute(query)
         }
+
+        async let steps = sum(stepsType, unit: .count())
+        async let calories = sum(caloriesType, unit: .kilocalorie())
+
+        return HealthSummary(
+            steps: Int(try await steps),
+            activeCalories: Int(try await calories)
+        )
     }
 }
