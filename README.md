@@ -3,7 +3,7 @@ TMM Mock App
 
 Project Setup & Architecture Foundation
 
-Focus: Clean structure and scalability from day one.
+Focus: Clean structure and scalability.
 	•	Created a SwiftUI-based iOS project targeting iOS 17
 	•	Established a clear MVVM-based folder structure
 	•	Introduced a central AppRootView to control app flow
